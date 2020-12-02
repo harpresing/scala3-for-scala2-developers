@@ -5,6 +5,33 @@
  * classes after their definition. Previously, this feature was emulated using implicits.
  */
 object ext_methods:
+  
+  //Example on Future
+  import scala.concurrent.Future
+  import scala.concurrent.ExecutionContext.Implicits.global
+  
+  // Inconvenient because ideally we'd like left.zip(right)
+  def zip[A, B](left: Future[A], right: Future[B]): Future[(A, B)] =
+    for 
+      l <- left
+      r <- right
+    yield (l, r)
+
+  /** To add this method to Future in Scala 2, we'd use an implicit class
+   * implicit class FutureSyntax[A](self: Future[A]) {
+      def zip[B](right: Future[B]): Future[(A, B)] =
+        self.flatMap(l => right.map(r => (l, r)))
+   
+   We use extension in Scala 3
+   */
+  extension [A, B] (self: Future[A]) def zip(r: Future[B]): Future[(A, B)] =
+    self.flatMap(l => r.map(r => (l, r)))
+    
+  def l: Future[Int] = ???
+  def r: Future[Int] = ???
+  
+  l.zip(r) // extension in action
+  
   final case class Email(value: String)
 
   /**
@@ -13,7 +40,8 @@ object ext_methods:
    * Add an extension method to `Email` to retrieve the username of the email address (the part 
    * of the string before the `@` symbol).
    */
-  extension (e: Email) def username: String = ???
+  extension (e: Email) def username: String =
+    e.value.takeWhile(_ != '@')
 
   val sherlock = Email("sherlock@holmes.com").username
 
@@ -23,7 +51,9 @@ object ext_methods:
    * Add an extension method to `Email` to retrieve the server of the email address (the part of 
    * the string after the `@` symbol).
    */
-  // extension
+  
+  extension (e: Email) def server: String =
+    e.value.dropWhile(_ != '@').tail
 
   /**
    * EXERCISE 3
@@ -31,7 +61,10 @@ object ext_methods:
    * Add an extension method to `Option[A]` that can zip one option with another `Option[B]`, to 
    * return an `Option[(A, B)]`.
    */
-  // extension 
+  
+  extension [A, B] (self: Option[A]) def zip(other: Option[B]): Option[(A, B)] =
+    self.flatMap(s => other.map(o => (s, o)))
+   
 
   /**
    * A rational number is one in the form n/m, where n and m are integers.
@@ -45,15 +78,18 @@ object ext_methods:
    * numbers, `*`, to multiply two rational numbers, and `-`, to subtract one rational number 
    * from another rational number.
    */
-  // extension
+  extension (a: Rational):
+    def +(b: Rational): Rational = ???
+    def *(b: Rational): Rational = ???
+    def -(b: Rational): Rational = ???
 
   /**
    * EXERCISE 5
    * 
    * Convert this implicit syntax class to use extension methods.
    */
-  implicit class StringOps(self: String):
-    def equalsIgnoreCase(that: String) = self.toLowerCase == that.toLowerCase
+  extension (self: String) def equalsIgnoreCase(that: String) = 
+    self.toLowerCase == that.toLowerCase
 
   object scope:
     extension (s: String) def isSherlock: Boolean = s.startsWith("Sherlock")
@@ -62,6 +98,10 @@ object ext_methods:
    * EXERCISE 6
    * 
    * Import the extension method `isSherlock` into the following object so the code will compile.
+   * 
+   * Tip: Put your extension methods in a package or an object so that they can be easily
+   * imported!
    */
   object test:
-    // "John Watson".isSherlock
+    import scope._
+    "John Watson".isSherlock
