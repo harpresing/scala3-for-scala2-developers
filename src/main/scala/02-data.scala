@@ -15,21 +15,43 @@
  * Enums and case classes provide first-class support for "algebraic data types" 
  * in Scala 3.
  */
-package enums: 
+package enums:
+
+
+  /**
+   * Example of Sum type in Scala 3
+   * 
+   * Haskell equivalent: 
+   * data FavouriteIDE = IntelliJIdea Int Int | VSCode Int | Emacs | Vim
+  */
+  enum FavouriteIDE:
+    case IntelliJIdea(minorVersion: Int, majorVersion: Int)
+    case VSCode(version: Int)
+    case Emacs
+    case Vim
+
+  val favouriteIDE = FavouriteIDE.IntelliJIdea(3, 2020)
+
+  def showFavouriteIDE =
+    favouriteIDE match
+      case FavouriteIDE.IntelliJIdea(v,_) => println(s"You like IntelliJ Idea $v")
+      case FavouriteIDE.VSCode(v) => println(s"You like VSCode $v")
+      case FavouriteIDE.Emacs => println(s"You like Emacs")
+      case FavouriteIDE.Vim => println(s"You like Vim")
+  
   /**
    * EXERCISE 1
    * 
    * Convert this "sealed trait" to an enum.
    */
-  sealed trait DayOfWeek
-  object DayOfWeek:
-    case object Sunday extends DayOfWeek
-    case object Monday extends DayOfWeek
-    case object Tuesday extends DayOfWeek
-    case object Wednesday extends DayOfWeek
-    case object Thursday extends DayOfWeek
-    case object Friday extends DayOfWeek
-    case object Saturday extends DayOfWeek
+  enum DayOfWeek:
+    case Sunday
+    case Monday
+    case Tuesday
+    case Wednesday
+    case Thursday
+    case Friday
+    case Saturday
 
   /**
    * EXERCISE 2
@@ -37,8 +59,8 @@ package enums:
    * Explore interop with Java enums by finding all values of `DayOfWeek`, and by 
    * finding the value corresponding to the string "Sunday".
    */
-  def daysOfWeek: Array[DayOfWeek] = ???
-  def sunday: DayOfWeek = ???
+  def daysOfWeek: Array[DayOfWeek] = DayOfWeek.values
+  def sunday: DayOfWeek = DayOfWeek.valueOf("Sunday")
 
   /**
    * EXERCISE 3
@@ -47,12 +69,18 @@ package enums:
    * 
    * Take special note of the inferred type of any of the case constructors!
    */
-  sealed trait Color 
-  object Color:
-    case object Red extends Color 
-    case object Green extends Color 
-    case object Blue extends Color
-    final case class Custom(red: Int, green: Int, blue: Int) extends Color
+  enum Color:
+    case Red 
+    case Green
+    case Blue
+    case Custom(red: Int, green: Int, blue: Int)
+
+  /** 
+   * Now by default it's type is Color, in the case of a sealed trait
+   * it would have been Color.Custom unless the Color type was explicitily
+   * added to the variable as val custom: Color 
+  */ 
+  val custom = Color.Custom(1, 2, 3)
 
   /**
    * EXERCISE 4
@@ -60,11 +88,17 @@ package enums:
    * Convert this "sealed trait" to an enum.
    * 
    * Take special note of the inferred type parameters in the case constructors!
+   * 
+   * Haskell: data Result e v = Succeed v | Fail e
+   * 
+   * +Error = Covariant in Error
+   * -Error = Contravariant in Error
+   * Error = Invariant in Error
+   *
    */
-  sealed trait Result[+Error, +Value]
-  object Result:
-    final case class Succeed[Value](value: Value) extends Result[Nothing, Value]
-    final case class Fail[Error](error: Error) extends Result[Error, Nothing]
+  enum Result[+Error, +Value]:
+    case Succeed(value: Value)
+    case Fail(error: Error)
 
   /**
    * EXERCISE 5
@@ -73,19 +107,20 @@ package enums:
    * 
    * Take special note of the inferred type parameters in the case constructors!
    */
-  sealed trait Workflow[-Input, +Output]
-  object Workflow:
-    final case class End[Output](value: Output) extends Workflow[Any, Output]
+  enum Workflow[-Input, +Output]:
+    case End(value: Output)
 
   /**
    * EXERCISE 6
    * 
    * Convert this "sealed trait" to an enum.
    */
-  sealed trait Conversion[-From, +To]
-  object Conversion:
-    case object AnyToString extends Conversion[Any, String]
-    case object StringToInt extends Conversion[String, Option[Int]]
+  enum Conversion[-From, +To]:
+    case AnyToString extends Conversion[Any, String]
+    case StringToInt extends Conversion[String, Option[Int]]
+
+  // If we ommited the extends above then the type of 'a' would be [Any, Nothing]
+  val a = Conversion.AnyToString
 
 /**
  * CASE CLASSES
@@ -99,9 +134,11 @@ package case_classes:
    * By making the public constructor private, make a smart constructor for `Email` so that only 
    * valid emails may be created.
    */
-  final case class Email(value: String)
+  final case class Email private (value: String)
   object Email:
-    def fromString(v: String): Option[Email] = ???
+    def fromString(v: String): Option[Email] =
+      if isValidEmail(v) then Some(Email(v))
+      else None
 
     def isValidEmail(v: String): Boolean = v.matches("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$")
 
@@ -109,7 +146,8 @@ package case_classes:
    * EXERCISE 2
    * 
    * Try to make a copy of an existing `Email` using `Email#copy` and note what happens.
-   * 
+   * Even if we used a private constructor, the .copy() method on the object was still 
+   * accessible in Scala 2.x so below we could do email.copy()
    */
   def changeEmail(email: Email): Email = ???
 
@@ -117,7 +155,7 @@ package case_classes:
    * EXERCISE 3
    * 
    * Try to create an Email directly by using the generated constructor in the companion object.
-   * 
+   * Similarly to copy(), the apply() method was also publically accessible!
    */
   def caseClassApply(value: String): Email = ???
 
